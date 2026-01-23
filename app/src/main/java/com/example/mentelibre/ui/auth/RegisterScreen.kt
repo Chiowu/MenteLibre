@@ -4,22 +4,32 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.ExposedDropdownMenuDefaults.textFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mentelibre.auth.Validators
+import com.example.mentelibre.data.local.AppDatabase
+import com.example.mentelibre.local.entity.UserEntity
+import com.example.mentelibre.data.session.SessionManager
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
-    onRegister: (name: String, email: String, password: String) -> Unit,
     onGoLogin: () -> Unit
 ) {
+    // ---------- CONTEXTO ----------
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // ---------- ESTADO ----------
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -28,6 +38,7 @@ fun RegisterScreen(
     var acceptedTerms by remember { mutableStateOf(false) }
     var hasSubmitted by remember { mutableStateOf(false) }
 
+    // ---------- VALIDACIONES ----------
     val emailError = Validators.email(email)
     val passwordError = Validators.password(password)
     val confirmError = Validators.confirmPassword(password, confirmPassword)
@@ -40,11 +51,12 @@ fun RegisterScreen(
                 confirmError == null &&
                 acceptedTerms
 
-    // 🎨 Colores pastel
+    // ---------- COLORES ----------
     val primaryLila = Color(0xFF7A6CF0)
     val softError = Color(0xFFC06C84)
     val inputBg = Color(0xFFF3F0FF)
 
+    // ---------- UI ----------
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -58,7 +70,6 @@ fun RegisterScreen(
                 )
             )
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -89,16 +100,14 @@ fun RegisterScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-
                 Column(modifier = Modifier.padding(24.dp)) {
 
-                    fun fieldColors() = TextFieldDefaults.colors(
-                        focusedContainerColor = inputBg,
-                        unfocusedContainerColor = inputBg,
-                        errorContainerColor = inputBg,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        errorIndicatorColor = Color.Transparent
+                    TextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        placeholder = { Text("Apodo favorito") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
                     )
 
                     TextField(
@@ -107,7 +116,7 @@ fun RegisterScreen(
                         placeholder = { Text("Apodo favorito") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = fieldColors()
+                        colors = textFieldColors()
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -118,7 +127,7 @@ fun RegisterScreen(
                         placeholder = { Text("Teléfono (opcional)") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = fieldColors()
+                        colors = textFieldColors()
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -130,7 +139,7 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         isError = showErrors && emailError != null,
-                        colors = fieldColors()
+                        colors = textFieldColors()
                     )
 
                     if (showErrors && emailError != null) {
@@ -147,7 +156,7 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         isError = showErrors && passwordError != null,
-                        colors = fieldColors()
+                        colors = textFieldColors()
                     )
 
                     if (showErrors && passwordError != null) {
@@ -164,7 +173,7 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         isError = showErrors && confirmError != null,
-                        colors = fieldColors()
+                        colors = textFieldColors()
                     )
 
                     if (showErrors && confirmError != null) {
@@ -183,11 +192,7 @@ fun RegisterScreen(
                     }
 
                     if (showErrors && termsError) {
-                        Text(
-                            "Debes aceptar los términos",
-                            color = softError,
-                            fontSize = 12.sp
-                        )
+                        Text("Debes aceptar los términos", color = softError, fontSize = 12.sp)
                     }
 
                     Spacer(Modifier.height(20.dp))
@@ -196,7 +201,26 @@ fun RegisterScreen(
                         onClick = {
                             hasSubmitted = true
                             if (canRegister) {
-                                onRegister(name, email.trim(), password)
+                                coroutineScope.launch {
+                                    val db = AppDatabase.getDatabase(context)
+                                    val session = SessionManager(context)
+
+                                    db.userDao().deleteAll()
+
+                                    db.userDao().insert(
+                                        UserEntity(
+                                            name = name,
+                                            email = email.trim(),
+                                            password = password
+                                        )
+                                    )
+
+                                    val savedUser = db.userDao().getUser()
+                                    if (savedUser != null) {
+                                        session.saveSession(savedUser.id)
+                                        onGoLogin()
+                                    }
+                                }
                             }
                         },
                         modifier = Modifier
@@ -216,10 +240,7 @@ fun RegisterScreen(
             Spacer(Modifier.height(16.dp))
 
             TextButton(onClick = onGoLogin) {
-                Text(
-                    "¿Ya tienes cuenta? Inicia sesión",
-                    color = Color.White
-                )
+                Text("¿Ya tienes cuenta? Inicia sesión", color = Color.White)
             }
         }
     }

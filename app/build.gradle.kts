@@ -2,14 +2,12 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt") //  NECESARIO PARA ROOM
+    id("kotlin-kapt") // NECESARIO PARA ROOM
 }
 
 android {
     namespace = "com.example.mentelibre"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.mentelibre"

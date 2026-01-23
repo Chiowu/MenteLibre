@@ -50,7 +50,7 @@ fun AppNavigation() {
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onRegister = {   // ✅ NOMBRE CORRECTO
+                onRegister = {
                     navController.navigate("register")
                 }
             )
