@@ -9,18 +9,18 @@ class SessionManager(context: Context) {
 
     fun saveSession(userId: Int) {
         prefs.edit()
-            .putBoolean("logged", true)
-            .putInt("userId", userId)
+            .putInt("USER_ID", userId)
+            .putBoolean("LOGGED_IN", true)
             .apply()
     }
 
-    fun isLogged(): Boolean =
-        prefs.getBoolean("logged", false)
+    fun isLoggedIn(): Boolean =
+        prefs.getBoolean("LOGGED_IN", false)
 
     fun getUserId(): Int =
-        prefs.getInt("userId", -1)
+        prefs.getInt("USER_ID", -1)
 
-    fun logout() {
+    fun clearSession() {
         prefs.edit().clear().apply()
     }
 }

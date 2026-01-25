@@ -29,9 +29,11 @@ android {
         }
     }
 
+    // 🔹 IMPORTANTE PARA LocalDate.now()
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -62,8 +64,13 @@ dependencies {
 
     // 🔹 ROOM (SQLite)
     implementation("androidx.room:room-runtime:2.6.1")
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.ui)
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+
+    // 🔹 Java Time (LocalDate, LocalTime, etc.)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     // 🔹 Tests
     testImplementation(libs.junit)

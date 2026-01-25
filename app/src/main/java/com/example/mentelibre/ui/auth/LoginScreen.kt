@@ -22,13 +22,11 @@ fun LoginScreen(
     onLogin: (String, String) -> Unit,
     onRegister: () -> Unit
 ) {
-    // ---------- ESTADO ----------
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPw by remember { mutableStateOf(false) }
     var hasSubmitted by remember { mutableStateOf(false) }
 
-    // ---------- VALIDACIONES ----------
     val emailError = Validators.email(email)
     val passwordError = if (password.isBlank()) "La contraseña es obligatoria" else null
 
@@ -37,11 +35,8 @@ fun LoginScreen(
 
     val canLogin = emailError == null && passwordError == null
 
-    // ---------- COLORES ----------
     val primaryLila = Color(0xFF7A6CF0)
     val softError = Color(0xFFC06C84)
-
-    // ---------- UI ----------
 
     Column(
         modifier = Modifier
@@ -100,21 +95,11 @@ fun LoginScreen(
                     label = { Text("Correo electrónico") },
                     singleLine = true,
                     isError = showEmailError,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = primaryLila,
-                        unfocusedBorderColor = Color.LightGray,
-                        errorBorderColor = softError
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 if (showEmailError) {
-                    Text(
-                        text = emailError!!,
-                        color = softError,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Text(emailError!!, color = softError, fontSize = 13.sp)
                 }
 
                 Spacer(Modifier.height(14.dp))
@@ -125,33 +110,18 @@ fun LoginScreen(
                     label = { Text("Contraseña") },
                     singleLine = true,
                     isError = showPasswordError,
-                    visualTransformation = if (showPw)
-                        VisualTransformation.None
-                    else
-                        PasswordVisualTransformation(),
+                    visualTransformation =
+                        if (showPw) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         TextButton(onClick = { showPw = !showPw }) {
-                            Text(
-                                if (showPw) "Ocultar" else "Mostrar",
-                                color = primaryLila
-                            )
+                            Text(if (showPw) "Ocultar" else "Mostrar", color = primaryLila)
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = primaryLila,
-                        unfocusedBorderColor = Color.LightGray,
-                        errorBorderColor = softError
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 if (showPasswordError) {
-                    Text(
-                        text = passwordError!!,
-                        color = softError,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Text(passwordError!!, color = softError, fontSize = 13.sp)
                 }
 
                 Spacer(Modifier.height(24.dp))
@@ -167,12 +137,9 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryLila,
-                        disabledContainerColor = primaryLila.copy(alpha = 0.4f)
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryLila)
                 ) {
-                    Text("Entrar", fontSize = 16.sp)
+                    Text("Entrar")
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -181,11 +148,7 @@ fun LoginScreen(
                     onClick = onRegister,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text(
-                        "Crear cuenta",
-                        color = primaryLila,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Crear cuenta", color = primaryLila)
                 }
             }
         }
