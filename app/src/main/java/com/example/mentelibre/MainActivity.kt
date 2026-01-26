@@ -3,22 +3,29 @@ package com.example.mentelibre
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.*
 import com.example.mentelibre.data.local.AppDatabase
 import com.example.mentelibre.data.mood.MoodRepository
-import com.example.mentelibre.data.mood.MoodResult
-import com.example.mentelibre.ui.auth.LoginScreen
-import com.example.mentelibre.ui.auth.RegisterScreen
-import com.example.mentelibre.ui.history.HistoryScreen
 import com.example.mentelibre.ui.home.HomeScreen
-import com.example.mentelibre.ui.mood.MoodRegisterScreen
-import com.example.mentelibre.ui.splash.SplashScreen
+import com.example.mentelibre.ui.home.HomeViewModel
+import com.example.mentelibre.ui.home.HomeViewModelFactory
+import com.example.mentelibre.ui.profile.ProfileScreen
 import com.example.mentelibre.ui.theme.MenteLibreTheme
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,104 +42,134 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    // ---------- DATABASE & REPOSITORY ----------
-    val db = remember { AppDatabase.getDatabase(context) }
-    val moodRepository = remember { MoodRepository(db.moodDao()) }
+    // 🔹 Repository REAL (Room)
+    val repository = remember {
+        MoodRepository(
+            AppDatabase.getDatabase(context).moodDao()
+        )
+    }
 
-    // ---------- ESTADOS GLOBALES ----------
-    var moodToday by remember { mutableStateOf<MoodResult?>(null) }
-    var history by remember { mutableStateOf(emptyList<MoodResult>()) }
+    // 🔹 HomeViewModel con Factory
+    val homeViewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(repository)
+    )
 
-    NavHost(
-        navController = navController,
-        startDestination = "splash"
-    ) {
+    val moodToday by homeViewModel.todayMood.collectAsState()
 
-        // ---------- SPLASH ----------
-        composable("splash") {
-            SplashScreen(
-                onFinish = {
-                    navController.navigate("login") {
-                        popUpTo("splash") { inclusive = true }
+    // 🔹 Cargar ánimo del día
+    LaunchedEffect(Unit) {
+        homeViewModel.loadTodayMood()
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(navController)
+        }
+    ) { paddingValues ->
+
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier.padding(paddingValues)
+        ) {
+
+            // 🏠 HOME
+            composable("home") {
+                HomeScreen(
+                    moodToday = moodToday,
+                    onGoProfile = {
+                        navController.navigate("profile")
                     }
-                }
-            )
-        }
-
-        // ---------- LOGIN ----------
-        composable("login") {
-            LoginScreen(
-                onLogin = { _, _ ->
-                    navController.navigate("home") {
-                        popUpTo("login") { inclusive = true }
-                    }
-                },
-                onRegister = {
-                    navController.navigate("register")
-                }
-            )
-        }
-
-        // ---------- REGISTER ----------
-        composable("register") {
-            RegisterScreen(
-                onGoLogin = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        // ---------- HOME ----------
-        composable("home") {
-
-            LaunchedEffect(Unit) {
-                moodToday = moodRepository.getTodayMood()
+                )
             }
 
-            HomeScreen(
-                onGoRegisterMood = {
-                    navController.navigate("mood")
-                },
-                onGoDiary = {
-                    navController.navigate("diary")
-                },
-                onGoHistory = {
-                    scope.launch {
-                        history = moodRepository.getAllMoods()
-                        navController.navigate("history")
-                    }
-                },
-                moodToday = moodToday
-            )
-        }
+            // 👤 PERFIL
+            composable("profile") {
+                ProfileScreen()
+            }
 
-        // ---------- REGISTRAR ÁNIMO ----------
-        composable("mood") {
-            MoodRegisterScreen(
-                onSaved = {
-                    scope.launch {
-                        moodToday = moodRepository.getTodayMood()
-                        navController.popBackStack()
-                    }
-                }
-            )
-        }
+            // 📊 HISTORIAL
+            composable("history") {
+                Text(
+                    text = "Pantalla Historial",
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
 
-        // ---------- HISTORIAL ----------
-        composable("history") {
-            HistoryScreen(
-                history = history,
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
+            // 📓 DIARIO
+            composable("diary") {
+                Text(
+                    text = "Pantalla Diario",
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
 
-        // ---------- DIARIO (PRÓXIMO PASO) ----------
-        composable("diary") {
-            // DiaryScreen() → lo hacemos después
+            // ⚙️ AJUSTES
+            composable("settings") {
+                Text(
+                    text = "Pantalla Ajustes",
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
         }
     }
 }
+
+@Composable
+fun BottomNavigationBar(navController: NavController) {
+
+    val items = listOf(
+        BottomNavItem("home", "Inicio", Icons.Filled.Home),
+        BottomNavItem("history", "Historial", Icons.Filled.BarChart),
+        BottomNavItem("diary", "Diario", Icons.Filled.Book),
+        BottomNavItem("settings", "Ajustes", Icons.Filled.Settings)
+    )
+
+    val currentRoute =
+        navController.currentBackStackEntryAsState().value?.destination?.route
+
+    NavigationBar(
+        containerColor = Color(0xFFFFF4F8),
+        tonalElevation = 8.dp
+    ) {
+        items.forEach { item ->
+            val selected = currentRoute == item.route
+
+            NavigationBarItem(
+                selected = selected,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo("home")
+                        launchSingleTop = true
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label
+                    )
+                },
+                label = {
+                    Text(
+                        text = item.label,
+                        fontSize = 12.sp
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color(0xFF8C2F45),
+                    selectedTextColor = Color(0xFF8C2F45),
+                    unselectedIconColor = Color(0xFFB8A7AE),
+                    unselectedTextColor = Color(0xFFB8A7AE),
+                    indicatorColor = Color(0xFFF6D8E8)
+                )
+            )
+        }
+    }
+}
+
+data class BottomNavItem(
+    val route: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)

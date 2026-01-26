@@ -1,31 +1,41 @@
 package com.example.mentelibre.ui.home
 
-import androidx.compose.foundation.Image
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.mentelibre.data.mood.MoodResult
+import com.example.mentelibre.data.profile.ProfileDataStore
 
 @Composable
 fun HomeScreen(
-    onGoRegisterMood: () -> Unit,
-    onGoDiary: () -> Unit,
-    onGoHistory: () -> Unit,
-    moodToday: MoodResult?
+    moodToday: MoodResult?,
+    onGoProfile: () -> Unit
 ) {
 
-    val primaryWine = Color(0xFF8C2F45)
+    val context = LocalContext.current
+    val dataStore = remember { ProfileDataStore(context) }
+
+    // 🔑 ESCUCHA CONTINUA (esto hace que se actualice al volver)
+    val profileImageFlow = dataStore.profileImageUri.collectAsState(initial = null)
+    val profileImageUri = profileImageFlow.value?.let { Uri.parse(it) }
+
     val bg = Brush.verticalGradient(
         listOf(
             Color(0xFFFFE6EC),
@@ -34,122 +44,133 @@ fun HomeScreen(
         )
     )
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(bg)
-            .padding(24.dp)
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-            Text(
-                text = "Inicio",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Medium,
-                color = primaryWine
+        // 👤 FOTO PERFIL (GRANDE + CIRCULAR REAL)
+        Box(
+            modifier = Modifier
+                .size(160.dp) // ⬅️ MÁS GRANDE (mockup)
+                .clip(CircleShape)
+                .background(Color(0xFFDCEFEA))
+                .border(
+                    width = 3.dp,
+                    color = Color.White,
+                    shape = CircleShape
+                )
+                .clickable { onGoProfile() },
+            contentAlignment = Alignment.Center
+        ) {
+            if (profileImageUri != null) {
+                AsyncImage(
+                    model = profileImageUri,
+                    contentDescription = "Foto usuario",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape) // 🔥 CLAVE
+                )
+            } else {
+                Text(
+                    text = "Tocar para\nagregar foto",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray,
+                    lineHeight = 18.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 🟣 PUNTAJE + ÁNIMO
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+            HomeMiniCard(
+                title = "Puntaje",
+                value = moodToday?.let { "${it.percentage}%" } ?: "--",
+                modifier = Modifier.weight(1f)
             )
 
-            Spacer(Modifier.height(32.dp))
+            HomeMiniCard(
+                title = "Ánimo",
+                value = moodToday?.mood?.label ?: "Sin registro",
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(8.dp)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 🔵 ACTIVIDAD
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFDDF3EA)),
+            elevation = CardDefaults.cardElevation(6.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+
+                Text(
+                    text = "Actividad",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-
-                    Text(
-                        "Tu estado de ánimo hoy",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = primaryWine
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    if (moodToday == null) {
-
-                        Text(
-                            "Aún no has registrado cómo te sientes",
-                            color = Color.Gray
-                        )
-
-                        Spacer(Modifier.height(16.dp))
-
-                        Button(
-                            onClick = onGoRegisterMood,
-                            colors = ButtonDefaults.buttonColors(containerColor = primaryWine),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text("Registrar ánimo")
-                        }
-
-                    } else {
-
-                        Image(
-                            painter = painterResource(moodToday.mood.icon),
-                            contentDescription = moodToday.mood.label,
-                            modifier = Modifier.size(120.dp)
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(
-                            moodToday.mood.label,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = primaryWine
-                        )
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Text(
-                            "${moodToday.percentage}%",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryWine
-                        )
-
-                        Text(
-                            moodToday.level,
-                            fontSize = 14.sp,
-                            color = Color.Gray
+                    repeat(4) {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .background(Color.White, CircleShape)
                         )
                     }
                 }
             }
-
-            Spacer(Modifier.height(32.dp))
-
-            HomeActionButton("📓 Diario", onGoDiary)
-            Spacer(Modifier.height(12.dp))
-            HomeActionButton("📊 Historial", onGoHistory)
         }
     }
 }
 
 @Composable
-private fun HomeActionButton(
-    text: String,
-    onClick: () -> Unit
+private fun HomeMiniCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEADCF8)),
         elevation = CardDefaults.cardElevation(6.dp)
     ) {
-        Box(
+        Column(
             modifier = Modifier.padding(20.dp),
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+
+            Text(text = title, fontSize = 14.sp)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = value,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

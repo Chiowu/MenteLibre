@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt") // NECESARIO PARA ROOM
+    id("kotlin-kapt")
 }
 
 android {
@@ -29,7 +29,7 @@ android {
         }
     }
 
-    // 🔹 IMPORTANTE PARA LocalDate.now()
+    // 🔹 Java 11 + LocalDate / LocalTime
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -43,6 +43,11 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // 🔹 CLAVE PARA ROOM + KAPT
+    kapt {
+        correctErrorTypes = true
+    }
 }
 
 dependencies {
@@ -51,6 +56,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("com.github.yalantis:ucrop:2.2.8")
+
 
     // 🔹 Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -59,15 +68,16 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
+    // 🔹 ICONOS MATERIAL EXTENDIDOS (⬅️ AÑADIDO)
+    implementation("androidx.compose.material:material-icons-extended")
+
     // 🔹 Navigation
     implementation(libs.androidx.navigation.compose)
 
     // 🔹 ROOM (SQLite)
     implementation("androidx.room:room-runtime:2.6.1")
-    implementation(libs.androidx.compose.runtime)
-    implementation(libs.androidx.ui)
-    kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
 
     // 🔹 Java Time (LocalDate, LocalTime, etc.)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")

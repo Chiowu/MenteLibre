@@ -1,35 +1,41 @@
-package com.example.mentelibre.ui.history
+package com.example.mentelibre.ui.mood
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.dp
+import kotlin.math.max
 
+/**
+ * Gráfico de línea simple para mostrar evolución del ánimo
+ * scores: valores entre 0f y 1f
+ */
 @Composable
 fun MoodLineChart(
-    points: List<MoodChartPoint>
+    scores: List<Float>,
+    modifier: Modifier = Modifier
 ) {
-    if (points.isEmpty()) return
+    if (scores.isEmpty()) return
 
     Canvas(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(160.dp)
     ) {
-        val maxValue = 100f
-        val spacing = size.width / (points.size - 1)
+        val maxScore = 1f
+        val minScore = 0f
+
+        val stepX = size.width / max(1, scores.size - 1)
 
         val path = Path()
-        val strokeWidth = 6f
 
-        points.forEachIndexed { index, point ->
-            val x = spacing * index
-            val y = size.height - (point.value / maxValue) * size.height
+        scores.forEachIndexed { index, score ->
+            val x = stepX * index
+            val y = size.height - ((score - minScore) / (maxScore - minScore)) * size.height
 
             if (index == 0) {
                 path.moveTo(x, y)
@@ -37,18 +43,19 @@ fun MoodLineChart(
                 path.lineTo(x, y)
             }
 
-            // puntos
+            // Punto
             drawCircle(
                 color = Color(0xFF8C2F45),
-                radius = 8f,
+                radius = 6f,
                 center = Offset(x, y)
             )
         }
 
+        // Línea
         drawPath(
             path = path,
             color = Color(0xFF8C2F45),
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
         )
     }
 }

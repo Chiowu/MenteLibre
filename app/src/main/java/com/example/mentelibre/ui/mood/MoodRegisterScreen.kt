@@ -20,8 +20,9 @@ import androidx.compose.ui.unit.sp
 import com.example.mentelibre.data.local.AppDatabase
 import com.example.mentelibre.data.local.entity.MoodEntryEntity
 import com.example.mentelibre.data.mood.MoodType
-import java.time.LocalDate
 import kotlinx.coroutines.launch
+
+import java.time.LocalDate
 
 @Composable
 fun MoodRegisterScreen(
@@ -32,6 +33,18 @@ fun MoodRegisterScreen(
 
     var selectedMood by remember { mutableStateOf<MoodType?>(null) }
     var error by remember { mutableStateOf(false) }
+
+    // datos reales del gráfico (desde Room)
+    var todayScores by remember { mutableStateOf<List<Float>>(emptyList()) }
+
+    // ---------- CARGAR DATOS DEL DÍA ----------
+    LaunchedEffect(Unit) {
+        val db = AppDatabase.getDatabase(context)
+        val today = LocalDate.now().toString()
+        todayScores = db.moodDao()
+            .getByDate(today)
+            .map { it.score }
+    }
 
     val bg = Brush.verticalGradient(
         listOf(
@@ -50,14 +63,30 @@ fun MoodRegisterScreen(
     ) {
 
         Text(
-            "¿Cómo te sientes hoy?",
+            text = "Estados de ánimo",
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
 
+        Spacer(Modifier.height(16.dp))
+
+        // ---------- GRÁFICO ----------
+        MoodLineChart(
+            scores = todayScores,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+
         Spacer(Modifier.height(24.dp))
 
-        // EMOJIS
+        Text(
+            text = "Registra tu estado de ánimo",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ---------- EMOJIS ----------
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -69,7 +98,7 @@ fun MoodRegisterScreen(
                             color = if (selectedMood == mood)
                                 mood.color
                             else
-                                Color.White,
+                                Color.White.copy(alpha = 0.6f),
                             shape = CircleShape
                         )
                         .clickable {
@@ -87,11 +116,11 @@ fun MoodRegisterScreen(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
         if (error) {
             Text(
-                "Debes seleccionar un estado de ánimo",
+                text = "Debes seleccionar un estado de ánimo",
                 color = Color.Red,
                 fontSize = 14.sp
             )
@@ -99,6 +128,7 @@ fun MoodRegisterScreen(
 
         Spacer(Modifier.height(24.dp))
 
+        // ---------- BOTÓN GUARDAR ----------
         Button(
             onClick = {
                 if (selectedMood == null) {
@@ -110,16 +140,19 @@ fun MoodRegisterScreen(
                     val db = AppDatabase.getDatabase(context)
                     val today = LocalDate.now().toString()
 
-                    val existing = db.moodDao().getMoodByDate(today)
-                    if (existing == null) {
-                        db.moodDao().insert(
-                            MoodEntryEntity(
-                                date = today,
-                                mood = selectedMood!!.name,
-                                score = selectedMood!!.score
-                            )
+                    // guardar en Room
+                    db.moodDao().insert(
+                        MoodEntryEntity(
+                            date = today,
+                            mood = selectedMood!!.name,
+                            score = selectedMood!!.score
                         )
-                    }
+                    )
+
+                    // volver a leer los datos del día
+                    todayScores = db.moodDao()
+                        .getByDate(today)
+                        .map { it.score }
 
                     onSaved()
                 }

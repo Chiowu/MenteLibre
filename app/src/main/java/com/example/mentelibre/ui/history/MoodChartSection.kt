@@ -1,5 +1,6 @@
 package com.example.mentelibre.ui.history
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,36 +10,61 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun MoodChartSection(
-    weekData: List<MoodChartPoint>,
-    monthData: List<MoodChartPoint>
+    weekPercentage: Int,
+    monthPercentage: Int
 ) {
-    var selected by remember { mutableStateOf(0) }
+    var selectedPeriod by remember { mutableStateOf("week") }
 
-    val data = if (selected == 0) weekData else monthData
+    val percentage =
+        if (selectedPeriod == "week") weekPercentage else monthPercentage
 
     Column {
 
         // ---------- SELECTOR ----------
-        TabRow(
-            selectedTabIndex = selected,
-            containerColor = Color.Transparent,
-            contentColor = Color(0xFF8C2F45)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Tab(
-                selected = selected == 0,
-                onClick = { selected = 0 },
-                text = { Text("Semana") }
+            FilterChip(
+                selected = selectedPeriod == "week",
+                onClick = { selectedPeriod = "week" },
+                label = { Text("Semana") }
             )
-            Tab(
-                selected = selected == 1,
-                onClick = { selected = 1 },
-                text = { Text("Mes") }
+
+            FilterChip(
+                selected = selectedPeriod == "month",
+                onClick = { selectedPeriod = "month" },
+                label = { Text("Mes") }
             )
         }
 
         Spacer(Modifier.height(24.dp))
 
         // ---------- GRÁFICO ----------
-        MoodLineChart(points = data)
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+        ) {
+            val barHeight = size.height * (percentage / 100f)
+
+            drawRect(
+                color = Color(0xFF8C2F45),
+                size = androidx.compose.ui.geometry.Size(
+                    width = size.width / 4,
+                    height = barHeight
+                ),
+                topLeft = androidx.compose.ui.geometry.Offset(
+                    x = size.width / 2 - (size.width / 8),
+                    y = size.height - barHeight
+                )
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "Promedio ${if (selectedPeriod == "week") "semanal" else "mensual"}: $percentage%",
+            style = MaterialTheme.typography.titleMedium
+        )
     }
 }

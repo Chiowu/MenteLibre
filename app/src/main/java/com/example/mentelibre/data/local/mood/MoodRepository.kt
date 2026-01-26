@@ -20,6 +20,15 @@ class MoodRepository(
             level = MoodScore.level(entry.score)
         )
     }
+
+    // ---------- PUNTOS PARA GRÁFICO DEL DÍA ----------
+    suspend fun getTodayChartPoints(): List<Float> {
+        val today = LocalDate.now().toString()
+        val entry = moodDao.getMoodByDate(today)
+
+        return entry?.let { listOf(it.score) } ?: emptyList()
+    }
+
     // ---------- PROMEDIO SEMANAL ----------
     suspend fun getWeekAverage(): Int {
         val list = moodDao.getLast7Days()
@@ -37,7 +46,6 @@ class MoodRepository(
         val avg = list.map { it.score }.average()
         return MoodScore.toPercentage(avg.toFloat())
     }
-
 
     // ---------- HISTORIAL COMPLETO ----------
     suspend fun getAllMoods(): List<MoodResult> {
