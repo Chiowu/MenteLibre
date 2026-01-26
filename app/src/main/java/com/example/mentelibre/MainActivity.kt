@@ -3,11 +3,6 @@ package com.example.mentelibre
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -16,7 +11,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -52,14 +46,14 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // 🔹 Repository (Room)
+    // Repository Room
     val repository = remember {
         MoodRepository(
             AppDatabase.getDatabase(context).moodDao()
         )
     }
 
-    // 🔹 HomeViewModel
+    // ViewModel Home
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(repository)
     )
@@ -75,7 +69,7 @@ fun AppNavigation() {
             val currentRoute =
                 navController.currentBackStackEntryAsState().value?.destination?.route
 
-            // No mostrar bottom bar en login / register
+            // ❌ No mostrar bottom bar en login / register
             if (currentRoute !in listOf("login", "register")) {
                 BottomNavigationBar(navController)
             }
@@ -89,55 +83,30 @@ fun AppNavigation() {
         ) {
 
             // 🔐 LOGIN
-            @Composable
-            fun LoginScreen(
-                onLoginSuccess: () -> Unit,
-                onGoRegister: () -> Unit
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-
-                    Text("Login", fontSize = 24.sp)
-
-                    Spacer(Modifier.height(24.dp))
-
-                    Button(onClick = onLoginSuccess) {
-                        Text("Iniciar sesión")
+            composable("login") {
+                LoginScreen(
+                    onLogin = { email, password ->
+                        // aquí luego puedes validar con BD si quieres
+                        navController.navigate("home") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    },
+                    onRegister = {
+                        navController.navigate("register")
                     }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    TextButton(onClick = onGoRegister) {
-                        Text("Crear cuenta")
-                    }
-                }
+                )
             }
-
 
             // 📝 REGISTER
-            @Composable
-            fun RegisterScreen(
-                onRegisterSuccess: () -> Unit
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-
-                    Text("Registro", fontSize = 24.sp)
-
-                    Spacer(Modifier.height(24.dp))
-
-                    Button(onClick = onRegisterSuccess) {
-                        Text("Registrarse")
+            composable("register") {
+                RegisterScreen(
+                    onGoLogin = {
+                        navController.navigate("login") {
+                            popUpTo("register") { inclusive = true }
+                        }
                     }
-                }
+                )
             }
-
 
             // 🏠 HOME
             composable("home") {
@@ -156,26 +125,17 @@ fun AppNavigation() {
 
             // 📊 HISTORIAL
             composable("history") {
-                Text(
-                    text = "Pantalla Historial",
-                    modifier = Modifier.padding(24.dp)
-                )
+                Text("Pantalla Historial", modifier = Modifier.padding(24.dp))
             }
 
             // 📓 DIARIO
             composable("diary") {
-                Text(
-                    text = "Pantalla Diario",
-                    modifier = Modifier.padding(24.dp)
-                )
+                Text("Pantalla Diario", modifier = Modifier.padding(24.dp))
             }
 
             // ⚙️ AJUSTES
             composable("settings") {
-                Text(
-                    text = "Pantalla Ajustes",
-                    modifier = Modifier.padding(24.dp)
-                )
+                Text("Pantalla Ajustes", modifier = Modifier.padding(24.dp))
             }
         }
     }
