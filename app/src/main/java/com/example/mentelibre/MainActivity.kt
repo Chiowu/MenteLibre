@@ -3,6 +3,11 @@ package com.example.mentelibre
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -11,6 +16,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -21,6 +27,8 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import com.example.mentelibre.data.local.AppDatabase
 import com.example.mentelibre.data.mood.MoodRepository
+import com.example.mentelibre.ui.auth.LoginScreen
+import com.example.mentelibre.ui.auth.RegisterScreen
 import com.example.mentelibre.ui.home.HomeScreen
 import com.example.mentelibre.ui.home.HomeViewModel
 import com.example.mentelibre.ui.home.HomeViewModelFactory
@@ -40,39 +48,96 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation() {
+
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // 🔹 Repository REAL (Room)
+    // 🔹 Repository (Room)
     val repository = remember {
         MoodRepository(
             AppDatabase.getDatabase(context).moodDao()
         )
     }
 
-    // 🔹 HomeViewModel con Factory
+    // 🔹 HomeViewModel
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(repository)
     )
 
     val moodToday by homeViewModel.todayMood.collectAsState()
 
-    // 🔹 Cargar ánimo del día
     LaunchedEffect(Unit) {
         homeViewModel.loadTodayMood()
     }
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(navController)
+            val currentRoute =
+                navController.currentBackStackEntryAsState().value?.destination?.route
+
+            // No mostrar bottom bar en login / register
+            if (currentRoute !in listOf("login", "register")) {
+                BottomNavigationBar(navController)
+            }
         }
     ) { paddingValues ->
 
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = "login",
             modifier = Modifier.padding(paddingValues)
         ) {
+
+            // 🔐 LOGIN
+            @Composable
+            fun LoginScreen(
+                onLoginSuccess: () -> Unit,
+                onGoRegister: () -> Unit
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    Text("Login", fontSize = 24.sp)
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Button(onClick = onLoginSuccess) {
+                        Text("Iniciar sesión")
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    TextButton(onClick = onGoRegister) {
+                        Text("Crear cuenta")
+                    }
+                }
+            }
+
+
+            // 📝 REGISTER
+            @Composable
+            fun RegisterScreen(
+                onRegisterSuccess: () -> Unit
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    Text("Registro", fontSize = 24.sp)
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Button(onClick = onRegisterSuccess) {
+                        Text("Registrarse")
+                    }
+                }
+            }
+
 
             // 🏠 HOME
             composable("home") {
@@ -134,10 +199,8 @@ fun BottomNavigationBar(navController: NavController) {
         tonalElevation = 8.dp
     ) {
         items.forEach { item ->
-            val selected = currentRoute == item.route
-
             NavigationBarItem(
-                selected = selected,
+                selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
                         popUpTo("home")
@@ -145,16 +208,10 @@ fun BottomNavigationBar(navController: NavController) {
                     }
                 },
                 icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label
-                    )
+                    Icon(item.icon, contentDescription = item.label)
                 },
                 label = {
-                    Text(
-                        text = item.label,
-                        fontSize = 12.sp
-                    )
+                    Text(item.label, fontSize = 12.sp)
                 },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = Color(0xFF8C2F45),

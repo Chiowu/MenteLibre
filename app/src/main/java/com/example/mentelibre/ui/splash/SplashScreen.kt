@@ -24,7 +24,8 @@ private enum class SplashStep {
 
 @Composable
 fun SplashScreen(
-    onFinish: () -> Unit
+    onFinish: () -> Unit,
+    onGoLogin: () -> Unit
 ) {
     var step by remember { mutableStateOf(SplashStep.LOGO) }
 
