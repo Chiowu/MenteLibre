@@ -17,4 +17,8 @@ interface UserDao {
 
     @Query("DELETE FROM user")
     suspend fun deleteAll()
+
+    // Nuevo método para login
+    @Query("SELECT * FROM user WHERE email = :email AND password = :password LIMIT 1")
+    suspend fun getUserByEmailAndPassword(email: String, password: String): UserEntity?
 }

@@ -24,7 +24,7 @@ object MoodExportUtil {
             out.println("Fecha,Estado,Score")
 
             moods.forEach {
-                out.println("${it.date},${it.mood},${it.score}")
+                out.println("${it.dateTime},${it.mood},${it.score}")
             }
         }
 

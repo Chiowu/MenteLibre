@@ -1,6 +1,9 @@
 package com.example.mentelibre.ui.auth
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -16,13 +19,71 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mentelibre.auth.Validators
 import com.example.mentelibre.data.local.AppDatabase
-import com.example.mentelibre.local.entity.UserEntity
+import com.example.mentelibre.data.profile.ProfileDataStore
 import com.example.mentelibre.data.session.SessionManager
+import com.example.mentelibre.local.entity.UserEntity
 import kotlinx.coroutines.launch
 
+// ---------------------------------------------
+// Clase para las estrellas
+data class Star(
+    val x: Float,
+    val y: Float,
+    val size: Float,
+    val alpha: Float
+)
+
+// ---------------------------------------------
+// Composable para las estrellas animadas
+@Composable
+fun AnimatedStarsBackground(modifier: Modifier = Modifier) {
+    val starCount = 100 // más estrellas
+    val stars = remember {
+        List(starCount) {
+            Star(
+                x = (0..1000).random() / 1000f,       // horizontal aleatoria
+                y = (0..1000).random() / 1000f,       // vertical aleatoria
+                size = (2..8).random().toFloat(),     // tamaño más grande
+                alpha = (3..10).random() / 10f        // opacidad variada
+            )
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition()
+    val animatedAlphas = stars.map { star ->
+        infiniteTransition.animateFloat(
+            initialValue = 0.3f * star.alpha,
+            targetValue = 1f * star.alpha,
+            animationSpec = infiniteRepeatable(
+                animation = tween((1500..3500).random(), easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            )
+        )
+    }
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+
+        stars.forEachIndexed { index, star ->
+            drawCircle(
+                color = Color.White.copy(alpha = animatedAlphas[index].value),
+                radius = star.size,
+                center = androidx.compose.ui.geometry.Offset(
+                    star.x * w,
+                    star.y * h
+                )
+            )
+        }
+    }
+}
+
+// ---------------------------------------------
+// Pantalla de registro
 @Composable
 fun RegisterScreen(
-    onGoLogin: () -> Unit
+    onGoLogin: () -> Unit,
+    onGoHome: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -53,30 +114,36 @@ fun RegisterScreen(
     val primaryLila = Color(0xFF7A6CF0)
     val softError = Color(0xFFC06C84)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFFFFC1D9),
-                        Color(0xFFE6C8F3),
-                        Color(0xFFD6E6F2)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Gradiente de fondo
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFFFFC1D9),
+                            Color(0xFFE6C8F3),
+                            Color(0xFFD6E6F2)
+                        )
                     )
                 )
-            )
-    ) {
+        )
+
+        // Estrellas animadas encima del gradiente
+        AnimatedStarsBackground()
+
+        // Contenido de la UI
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text("Crear cuenta", fontSize = 28.sp, color = Color(0xFF4A3F6B))
+            Text("Un espacio seguro para ti", color = Color(0xFF4A3F6B).copy(0.85f))
 
-            Text("Crear cuenta", fontSize = 26.sp, color = Color.White)
-            Text("Un espacio seguro para ti", color = Color.White.copy(0.85f))
-
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -167,6 +234,7 @@ fun RegisterScreen(
                                 coroutineScope.launch {
                                     val db = AppDatabase.getDatabase(context)
                                     val session = SessionManager(context)
+                                    val profileDataStore = ProfileDataStore(context)
 
                                     db.userDao().deleteAll()
                                     db.userDao().insert(
@@ -179,8 +247,12 @@ fun RegisterScreen(
 
                                     db.userDao().getUser()?.let {
                                         session.saveSession(it.id)
-                                        onGoLogin()
+                                        onGoHome()
                                     }
+
+                                    profileDataStore.saveUserName(name)
+                                    profileDataStore.saveUserEmail(email.trim())
+                                    profileDataStore.saveUserPhone(phone)
                                 }
                             }
                         },
@@ -189,6 +261,21 @@ fun RegisterScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = primaryLila)
                     ) {
                         Text("Comenzar")
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("¿Ya tienes una cuenta? ")
+                        Text(
+                            "Ingresa aquí",
+                            color = primaryLila,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { onGoLogin() }
+                        )
                     }
                 }
             }

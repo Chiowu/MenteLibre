@@ -3,7 +3,6 @@ package com.example.mentelibre.ui.mood
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -21,7 +20,7 @@ import com.example.mentelibre.data.mood.MoodRepository
 import com.example.mentelibre.data.mood.MoodType
 
 @Composable
-fun MoodRegisterScreen(
+fun MoodRegisterSection(
     repository: MoodRepository,
     onBack: () -> Unit
 ) {
@@ -30,9 +29,11 @@ fun MoodRegisterScreen(
         factory = MoodViewModelFactory(repository)
     )
 
-    val chartPoints by viewModel.chartData.collectAsState()
+    // 🔹 estados del ViewModel
+    val chartData by viewModel.chartData.collectAsState()
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
 
+    // 🔹 estados locales
     var selectedMood by remember { mutableStateOf<MoodType?>(null) }
     var showHelp by remember { mutableStateOf(false) }
 
@@ -51,7 +52,7 @@ fun MoodRegisterScreen(
             .padding(24.dp)
     ) {
 
-        // 🔙 HEADER
+        // 🔙 BACK + TITLE
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "←",
@@ -69,13 +70,13 @@ fun MoodRegisterScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Ve tu estado de ánimo a lo largo del tiempo.",
+            text = "Registra y observa cómo evoluciona tu ánimo.",
             color = Color.DarkGray
         )
 
         Spacer(Modifier.height(20.dp))
 
-        // 🟣 TABS
+        // 🟣 TABS FUNCIONALES
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -119,14 +120,14 @@ fun MoodRegisterScreen(
                 .fillMaxWidth()
                 .height(180.dp)
         ) {
-            if (chartPoints.isNotEmpty()) {
-                MoodLineChart(points = chartPoints)
+            if (chartData.isNotEmpty()) {
+                MoodLineChart(points = chartData)
             }
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // 📝 TITLE + ?
+        // 📝 TITLE + HELP
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -148,14 +149,12 @@ fun MoodRegisterScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // 😀 EMOJIS CON SCROLL
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+        // 😀 EMOJIS + NOMBRE
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            items(MoodType.values().size) { index ->
-                val mood = MoodType.values()[index]
-
+            MoodType.values().take(5).forEach { mood ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -192,7 +191,7 @@ fun MoodRegisterScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // 💾 GUARDAR
+        // 💾 GUARDAR (permite cambiar varias veces)
         Button(
             onClick = {
                 selectedMood?.let {
@@ -209,44 +208,17 @@ fun MoodRegisterScreen(
         ) {
             Text("Guardar estado", fontSize = 16.sp, color = Color.White)
         }
-
-        Spacer(Modifier.height(24.dp))
-
-        // 📜 HISTORIAL SIMPLE
-        Text(
-            text = "Historial reciente",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        if (chartPoints.isEmpty()) {
-            Text(
-                text = "Aún no hay registros.",
-                fontSize = 13.sp,
-                color = Color.Gray
-            )
-        } else {
-            chartPoints.takeLast(5).forEach {
-                Text(
-                    text = "• ${it.label}",
-                    fontSize = 13.sp,
-                    color = Color.DarkGray
-                )
-            }
-        }
     }
 
-    // DIALOGO AYUDA
+    // ❓ DIALOGO DE AYUDA
     if (showHelp) {
         AlertDialog(
             onDismissRequest = { showHelp = false },
             title = { Text("¿Qué significa cada estado?") },
             text = {
                 Column {
-                    MoodType.values().forEach {
-                        Text("• ${it.label}: ${descripcionMood(it)}")
+                    MoodType.values().take(5).forEach {
+                        Text("• ${it.label}: ${it.description}")
                     }
                 }
             },
@@ -258,15 +230,3 @@ fun MoodRegisterScreen(
         )
     }
 }
-
-// 🧠 DESCRIPCIÓN HUMANA DE EMOCIONES
-fun descripcionMood(mood: MoodType): String =
-    when (mood) {
-        MoodType.Feliz -> "Te sientes bien, con energía o alegría."
-        MoodType.Tranquilo -> "Estás en calma y relajado."
-        MoodType.Sereno -> "Te sientes estable y en equilibrio."
-        MoodType.Neutral -> "No hay un ánimo fuerte positivo o negativo."
-        MoodType.Enojado -> "Sientes molestia o frustración."
-        MoodType.Triste -> "Te sientes bajo de ánimo."
-        MoodType.Deprimido -> "Ánimo muy bajo o agotamiento emocional."
-    }

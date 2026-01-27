@@ -17,7 +17,7 @@ import com.example.mentelibre.local.entity.UserEntity
         MoodEntryEntity::class,
         DiaryEntryEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

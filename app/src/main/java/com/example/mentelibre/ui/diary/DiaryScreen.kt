@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +20,7 @@ import com.example.mentelibre.data.local.AppDatabase
 import com.example.mentelibre.data.local.entity.MoodEntryEntity
 import com.example.mentelibre.data.mood.MoodType
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.LocalDateTime
 
 @Composable
 fun DiaryScreen(
@@ -43,12 +42,11 @@ fun DiaryScreen(
 
     // Cargar emociones del día
     LaunchedEffect(Unit) {
-        val today = LocalDate.now().toString()
         todayScores = AppDatabase
             .getDatabase(context)
             .moodDao()
-            .getMoodByDate(today)
-            ?.let { listOf(it.score) } ?: emptyList()
+            .getTodayMoods()
+            .map { it.score }
     }
 
     Column(
@@ -70,16 +68,6 @@ fun DiaryScreen(
                 fontWeight = FontWeight.Medium
             )
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        // ---------- GRÁFICO ----------
-        MoodLineChart(
-            scores = todayScores,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-        )
 
         Spacer(Modifier.height(24.dp))
 
@@ -106,11 +94,10 @@ fun DiaryScreen(
 
                             scope.launch {
                                 val db = AppDatabase.getDatabase(context)
-                                val today = LocalDate.now().toString()
 
                                 db.moodDao().insert(
                                     MoodEntryEntity(
-                                        date = today,
+                                        dateTime = LocalDateTime.now().toString(),
                                         mood = mood.name,
                                         score = mood.score
                                     )
@@ -130,9 +117,4 @@ fun DiaryScreen(
             }
         }
     }
-}
-
-@Composable
-fun MoodLineChart(scores: List<Float>, modifier: Modifier) {
-    TODO("Not yet implemented")
 }

@@ -21,12 +21,17 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import com.example.mentelibre.data.local.AppDatabase
 import com.example.mentelibre.data.mood.MoodRepository
+import com.example.mentelibre.data.session.SessionManager
 import com.example.mentelibre.ui.auth.LoginScreen
 import com.example.mentelibre.ui.auth.RegisterScreen
 import com.example.mentelibre.ui.home.HomeScreen
 import com.example.mentelibre.ui.home.HomeViewModel
 import com.example.mentelibre.ui.home.HomeViewModelFactory
+import com.example.mentelibre.ui.home.SecurityScreen
+import com.example.mentelibre.ui.home.SettingsScreen
+import com.example.mentelibre.ui.mood.MoodRegisterScreen
 import com.example.mentelibre.ui.profile.ProfileScreen
+import com.example.mentelibre.ui.splash.SplashScreen
 import com.example.mentelibre.ui.theme.MenteLibreTheme
 
 class MainActivity : ComponentActivity() {
@@ -45,31 +50,42 @@ fun AppNavigation() {
 
     val navController = rememberNavController()
     val context = LocalContext.current
+    val session = remember { SessionManager(context) }
 
-    // Repository Room
+
     val repository = remember {
         MoodRepository(
             AppDatabase.getDatabase(context).moodDao()
         )
     }
 
-    // ViewModel Home
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(repository)
     )
 
     val moodToday by homeViewModel.todayMood.collectAsState()
 
-    LaunchedEffect(Unit) {
-        homeViewModel.loadTodayMood()
+    // 🔥 ESCUCHA CUANDO VOLVEMOS DESDE REGISTRAR ÁNIMO
+    val savedStateHandle =
+        navController.currentBackStackEntry?.savedStateHandle
+    val shouldRefresh by savedStateHandle
+        ?.getStateFlow("mood_saved", false)
+        ?.collectAsState() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(shouldRefresh) {
+        if (shouldRefresh) {
+            homeViewModel.loadTodayMood()
+            savedStateHandle?.set("mood_saved", false)
+        }
     }
+    // Decidir destino inicial según sesión
+    val startDestination = if (session.getUserId() != null) "home" else "splash"
 
     Scaffold(
         bottomBar = {
             val currentRoute =
                 navController.currentBackStackEntryAsState().value?.destination?.route
 
-            // ❌ No mostrar bottom bar en login / register
             if (currentRoute !in listOf("login", "register")) {
                 BottomNavigationBar(navController)
             }
@@ -78,15 +94,29 @@ fun AppNavigation() {
 
         NavHost(
             navController = navController,
-            startDestination = "login",
+            startDestination = startDestination,
             modifier = Modifier.padding(paddingValues)
         ) {
+            // SPLASH
+            composable("splash") {
+                SplashScreen(
+                    onFinish = {
+                        navController.navigate("register") {
+                            popUpTo("splash") { inclusive = true }
+                        }
+                    },
+                    onGoLogin = {
+                        navController.navigate("login") {
+                            popUpTo("splash") { inclusive = true }
+                        }
+                    }
+                )
+            }
 
-            // 🔐 LOGIN
+            // LOGIN
             composable("login") {
                 LoginScreen(
-                    onLogin = { email, password ->
-                        // aquí luego puedes validar con BD si quieres
+                    onLoginSuccess = {
                         navController.navigate("home") {
                             popUpTo("login") { inclusive = true }
                         }
@@ -97,49 +127,88 @@ fun AppNavigation() {
                 )
             }
 
-            // 📝 REGISTER
+            // REGISTER
             composable("register") {
                 RegisterScreen(
                     onGoLogin = {
                         navController.navigate("login") {
                             popUpTo("register") { inclusive = true }
                         }
+                    },
+                    onGoHome = {
+                        navController.navigate("home") {
+                            popUpTo("register") { inclusive = true }
+                        }
                     }
                 )
             }
 
-            // 🏠 HOME
             composable("home") {
                 HomeScreen(
                     moodToday = moodToday,
-                    onGoProfile = {
-                        navController.navigate("profile")
+                    onGoProfile = { navController.navigate("profile") },
+                    onRefresh = { homeViewModel.loadTodayMood() },
+                    onGoMood = { navController.navigate("mood_register") }
+                )
+            }
+
+            // ⭐ REGISTRAR ÁNIMO (AQUÍ ESTÁ LA MAGIA)
+            composable("mood_register") {
+                MoodRegisterScreen(
+                    repository = repository,
+                    onBack = {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("mood_saved", true)
+
+                        navController.popBackStack()
                     }
                 )
             }
 
-            // 👤 PERFIL
+            // PERFIL
             composable("profile") {
-                ProfileScreen()
+                ProfileScreen(onBack = { navController.popBackStack() })
             }
-
-            // 📊 HISTORIAL
-            composable("history") {
-                Text("Pantalla Historial", modifier = Modifier.padding(24.dp))
-            }
-
-            // 📓 DIARIO
-            composable("diary") {
-                Text("Pantalla Diario", modifier = Modifier.padding(24.dp))
-            }
-
-            // ⚙️ AJUSTES
+            composable("history") { Text("Pantalla Historial", Modifier.padding(24.dp)) }
+            composable("diary") { Text("Pantalla Diario", Modifier.padding(24.dp)) }
+            // AJUSTES
             composable("settings") {
-                Text("Pantalla Ajustes", modifier = Modifier.padding(24.dp))
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onProfile = { navController.navigate("profile") },
+                    onSecurity = { navController.navigate("security") },
+                    onSupport = { /* navegar a soporte */ },
+                    onSuggestions = { /* navegar a sugerencias */ },
+                    onDeleteAccount = {
+                        val sessionManager = SessionManager(context)
+                        sessionManager.clearSession()
+                        AppDatabase.getDatabase(context).clearAllTables()
+                        navController.navigate("register") { popUpTo(0) { inclusive = true } }
+                    },
+                    onLogout = {
+                        val sessionManager = SessionManager(context)
+                        sessionManager.clearSession() // Borra la sesión
+                        navController.navigate("register") { popUpTo(0) { inclusive = true } }
+                    }
+                )
+            }
+
+            // AJUSTES -> SEGURIDAD
+            composable("security") {
+                SecurityScreen(
+                    onBack = { navController.popBackStack() },
+                    onChangePassword = {
+                        // Aquí puedes navegar a otra pantalla de cambiar contraseña si existe
+                        navController.navigate("change_password")
+                    }
+                )
             }
         }
     }
 }
+
+
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
@@ -154,10 +223,7 @@ fun BottomNavigationBar(navController: NavController) {
     val currentRoute =
         navController.currentBackStackEntryAsState().value?.destination?.route
 
-    NavigationBar(
-        containerColor = Color(0xFFFFF4F8),
-        tonalElevation = 8.dp
-    ) {
+    NavigationBar(containerColor = Color(0xFFFFF4F8)) {
         items.forEach { item ->
             NavigationBarItem(
                 selected = currentRoute == item.route,
@@ -167,19 +233,8 @@ fun BottomNavigationBar(navController: NavController) {
                         launchSingleTop = true
                     }
                 },
-                icon = {
-                    Icon(item.icon, contentDescription = item.label)
-                },
-                label = {
-                    Text(item.label, fontSize = 12.sp)
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF8C2F45),
-                    selectedTextColor = Color(0xFF8C2F45),
-                    unselectedIconColor = Color(0xFFB8A7AE),
-                    unselectedTextColor = Color(0xFFB8A7AE),
-                    indicatorColor = Color(0xFFF6D8E8)
-                )
+                icon = { Icon(item.icon, contentDescription = null) },
+                label = { Text(item.label, fontSize = 12.sp) }
             )
         }
     }

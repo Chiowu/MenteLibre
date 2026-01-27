@@ -17,8 +17,10 @@ class SessionManager(context: Context) {
     fun isLoggedIn(): Boolean =
         prefs.getBoolean("LOGGED_IN", false)
 
-    fun getUserId(): Int =
-        prefs.getInt("USER_ID", -1)
+    fun getUserId(): Int? {
+        val id = prefs.getInt("USER_ID", -1)
+        return if (id != -1) id else null
+    }
 
     fun clearSession() {
         prefs.edit().clear().apply()
